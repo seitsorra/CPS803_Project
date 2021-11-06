@@ -20,7 +20,7 @@ def train_random_forest_classifier():
 
 def train_keras():
     model = Sequential()
-    model.add(Dense(24, input_dim=41, activation='relu'))
+    model.add(Dense(24, input_dim=train_x.shape[1], activation='relu'))
     model.add(Dense(16, activation='relu'))
     model.add(Dense(8, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
