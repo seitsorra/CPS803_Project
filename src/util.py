@@ -1,13 +1,24 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.preprocessing import LabelEncoder
 
 # list of columns that we want to use for out training and testing of our models
+# cols = ['Pclass','Sex','AgeGroup','SibSp','Parch','Embarked','Survived',
+#         'cabin_adv','cabin_multiple','numeric_ticket', 'name_title']
 cols = ['Pclass','Sex','AgeGroup','SibSp','Parch','Embarked','Survived',
-        'cabin_adv','cabin_multiple','numeric_ticket', 'name_title']
+         'cabin_multiple','numeric_ticket', 'name_title']
+
+#cols = ['Sex','cabin_multiple','Embarked', 'Pclass','Survived']
 
 train_data_ratio = 0.8
-valid_data_ratio = 0.1
-test_data_ratio = 0.1
+test_data_ratio = 0.2
+
+valid_data_ratio = 0.2 # this is with respect to train data size as defined by above value
+
 
 def create_age_groups(df):
     """
@@ -86,14 +97,13 @@ def load_data(filepath):
 
     # Calculate index to split data into train/validate/test
     train_len = round(len(data_randomized) * train_data_ratio)
-    valid_len = round(len(data_randomized) * valid_data_ratio)
-    valid_end_idx = train_len + valid_len
-    
+    valid_len = round(train_len * valid_data_ratio)
+
 
     # Split into training and test sets
-    train = data_randomized[:train_len]
-    valid = data_randomized[train_len:valid_end_idx]
-    test = data_randomized[valid_end_idx:]
+    train = data_randomized[:train_len-valid_len]
+    valid = data_randomized[train_len-valid_len:train_len]
+    test = data_randomized[train_len:]
 
     # extract label column for each set
     train_y = train.Survived
@@ -107,8 +117,62 @@ def load_data(filepath):
 
     return [(train_x, train_y), (valid_x, valid_y), (test_x, test_y)]
 
+def load(file):
+    df = pd.read_csv(file, index_col="PassengerId")
+    # Randomize the dataset
+    data_randomized = df.sample(frac=1, random_state=1)
+
+    # Calculate index to split data into train/validate/test
+    train_len = round(len(data_randomized) * train_data_ratio)
+    valid_len = round(train_len * valid_data_ratio)
+
+
+    # Split into training and test sets
+    train = data_randomized[:train_len-valid_len]
+    valid = data_randomized[train_len-valid_len:train_len]
+    test = data_randomized[train_len:]
+
+    # extract label column for each set
+    train_y = train.Survived
+    train_x = train.drop(['Survived'], axis = 1)
+
+    valid_y = valid.Survived
+    valid_x = valid.drop(['Survived'], axis = 1)
+
+    test_y = test.Survived
+    test_x = test.drop(['Survived'], axis = 1)
+
+    return [(train_x, train_y), (valid_x, valid_y), (test_x, test_y)]
+
+
+def plot_confusion_matrix(cm):
+    cm = cm / cm.sum(axis=1).reshape(-1, 1)
+    sns.heatmap(cm, cmap="Blues", xticklabels=["Died", "Survived"], yticklabels=["Died", "Survived"], vmin=0., vmax=1., annot=True, annot_kws={'size':50})
+    plt.title("Confusion Matrix")
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+def print_model_metrics(cm):
+    FP = cm.sum(axis=0) - np.diag(cm)
+    FN = cm.sum(axis=1) - np.diag(cm)
+    TP = np.diag(cm)
+    TN = cm.sum() - (FP+FN+TP)
+
+    # True positive rate / Sensitivity
+    TPR = TP / (TP + FN)
+
+    # Precision
+    PRE = TP / (TP + FP)
+
+    # False positive rate
+    FPR = FP / (FP + TN)
+
+    print("True positive rate is: ", TPR)
+    print("Precision rate is: ", PRE)
+    print("False posivitive rate is: ", FPR)
+
 if __name__ == '__main__':
     filename = "../data/train.csv"
-    data = load_data(filename)
+    data = load(filename)
     train_x, train_y = data[0]
     print(train_x.shape)
